@@ -1,0 +1,30 @@
+{
+  "class_names": ["good", "bad"],
+  "prop_names": ["likes", "dislikes", "whatchers"],
+  "data": {
+    "good": [
+      {
+        "likes": 150000,
+        "dislikes": 100,
+        "whatchers": 1000
+      },
+      {
+        "likes": 200000,
+        "dislikes": 98,
+        "whatchers": 1100
+      }
+    ],
+    "bad": [
+      {
+        "likes": 1000,
+        "dislikes": 150000,
+        "whatchers": 1456
+      },
+      {
+        "likes": 998,
+        "dislikes": 150012,
+        "whatchers": 1000
+      }
+    ]
+  }
+}
