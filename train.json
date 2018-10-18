@@ -2,8 +2,7 @@
   "class_names": ["good", "bad"],
   "prop_names": ["likes", "dislikes", "whatchers"],
   "data": {
-    "good": [
-      {
+    "good": [{
         "likes": 150000,
         "dislikes": 100,
         "whatchers": 1000
@@ -14,8 +13,7 @@
         "whatchers": 1100
       }
     ],
-    "bad": [
-      {
+    "bad": [{
         "likes": 1000,
         "dislikes": 150000,
         "whatchers": 1456
