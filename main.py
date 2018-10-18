@@ -1,5 +1,6 @@
 from typing import List, Dict, Any
 import json
+from itertools import combinations
 
 from mathstat import Vector, M, D, r
 
@@ -32,6 +33,8 @@ class Dataset:
 
 
 class Class:
+    ACCEPT_REGRESSION = 0.7
+
     def __init__(self, name: str, prop_names: List[str]):
         self.name = name
         self.prop_names = prop_names
@@ -49,6 +52,20 @@ class Class:
         if prop_info is None:
             raise Exception(f'Invalid prop_name {prop_name} for class {self.name}')
         return prop_info
+
+    def find_recursion(self):
+        props_combinations = combinations(self.prop_names, 2)
+        self.regressions = []
+        for combination in props_combinations:
+            reg = r(self.prop_info[combination[0]].values, self.prop_names[combination[1]].values)
+            if abs(reg) >= self.ACCEPT_REGRESSION:
+                lcomb = list(combination)
+                lcomb.append(reg)
+                self.regressions.append(lcomb)
+        self.acceptance_number = len(self.regressions)
+
+    def predict(self, data: Dict[str, Any]):
+        pass
 
     def __str__(self):
         nl = '\n'
@@ -116,5 +133,7 @@ if __name__ == '__main__':
         for class_name, class_data in data["data"].items():
             for d in class_data:
                 dataset.train(class_name, d)
+        for class_name, class_ in dataset.class_set.items():
+            class_.find_recursion()
 
         print(dataset)
