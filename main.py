@@ -29,6 +29,7 @@ class Dataset:
         res = ''
         for _, cls_ in self.class_set.items():
             res += str(cls_)
+            res += f'Regressions: {cls_.regressions}' + '\n'
         return res
 
 
@@ -57,7 +58,7 @@ class Class:
         props_combinations = combinations(self.prop_names, 2)
         self.regressions = []
         for combination in props_combinations:
-            reg = r(self.prop_info[combination[0]].values, self.prop_names[combination[1]].values)
+            reg = r(self.props_info[combination[0]].values, self.props_info[combination[1]].values)
             if abs(reg) >= self.ACCEPT_REGRESSION:
                 lcomb = list(combination)
                 lcomb.append(reg)
@@ -73,6 +74,7 @@ class Class:
         for pname, pinfo in self.props_info.items():
             res += f'{str(pinfo)}{nl}'
         return res
+
 
 class PropInfo:
     def __init__(self, prop_name: str):
@@ -116,9 +118,6 @@ class PropInfo:
     def __str__(self):
         nl = '\n'
         return f'{self.prop_name}:{nl}M: {self.M}{nl}D: {self.D}{nl}exp: {self.exp}{nl}Values: {self.values}{nl}'
-
-
-
 
 
 if __name__ == '__main__':
