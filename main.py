@@ -11,7 +11,7 @@ MAX = 10000000000.0
 class Dataset:
     def __init__(self, class_names: List[str], prop_names: List[str], name=''):
         self.name = name or '::'.join(class_names)
-        self.class_set: Dict[str, 'Class'] = dict(
+        self.classes: Dict[str, 'Class'] = dict(
                                 [(cls_name, Class(cls_name, prop_names)) \
                                 for cls_name in class_names])
 
@@ -20,14 +20,14 @@ class Dataset:
         class_.train(data)
 
     def get_class(self, class_name) -> 'Class':
-        class_ = self.class_set.get(class_name)
+        class_ = self.classes.get(class_name)
         if class_ is None:
             raise Exception(f'Invalid class name {class_name} for dataset {self.name}')
         return class_
 
     def __str__(self):
         res = ''
-        for _, cls_ in self.class_set.items():
+        for _, cls_ in self.classes.items():
             res += str(cls_)
             res += f'Regressions: {cls_.regressions}' + '\n'
         return res
@@ -42,6 +42,7 @@ class Class:
         self.props_info: Dict[str: 'PropInfo'] = dict(
                                 [(prop_name, PropInfo(prop_name)) \
                                 for prop_name in self.prop_names])
+        self.regressions = []
 
     def train(self, data: Dict[str, Any]):
         for prop_name, prop_value in data.items():
@@ -56,7 +57,6 @@ class Class:
 
     def find_recursion(self):
         props_combinations = combinations(self.prop_names, 2)
-        self.regressions = []
         for combination in props_combinations:
             reg = r(self.props_info[combination[0]].values, self.props_info[combination[1]].values)
             if abs(reg) >= self.ACCEPT_REGRESSION:
@@ -65,8 +65,16 @@ class Class:
                 self.regressions.append(lcomb)
         self.acceptance_number = len(self.regressions)
 
-    def predict(self, data: Dict[str, Any]):
-        pass
+    def is_that(self, data: Dict[str, Any]):
+        res = 0
+        for k, v in data.items():
+            prop = self.props_info[k]
+            if self.verify(prop, v):
+                res += 1
+        return res / len(data)
+
+    def verify(self, prop: 'PropInfo', value):
+        return abs(prop.M - value) <= prop.exp
 
     def __str__(self):
         nl = '\n'
@@ -120,19 +128,46 @@ class PropInfo:
         return f'{self.prop_name}:{nl}M: {self.M}{nl}D: {self.D}{nl}exp: {self.exp}{nl}Values: {self.values}{nl}'
 
 
+def build_json_from_csv(file_name, class_name):
+    def get_list_items(line):
+        return [i.strip() for i in line.split(',')]
+
+    def build_item(items, prop_names, class_index, to_type=float):
+        res = {}
+        for i, _ in enumerate(prop_names):
+            if i == class_index:
+                continue
+            res[prop_names[i]] = to_type(items[i])
+        return res
+
+    with open(file_name, 'r') as src_file:
+        headers = get_list_items(src_file.readline())
+        prop_names = [h for h in headers if h != class_name]
+        class_index = headers.index(class_name)
+        jsond = {'prop_names': prop_names, 'class_names': [], 'data': {}}
+        for line in src_file:
+            items = get_list_items(line)
+            new_class_name = items[class_index]
+            if jsond['data'].get(new_class_name) is None:
+                jsond['data'][new_class_name] = []
+                jsond['class_names'].append(new_class_name)
+            jsond['data'][new_class_name].append(build_item(items, prop_names, class_index))
+    with open('new_iris.json', 'w') as f:
+        f.write(json.dumps(jsond));
+    return jsond
+
+
 if __name__ == '__main__':
-    filename = 'train.json'
-    with open(filename, 'r') as f:
-        data = json.loads(f.read())
+    filename = 'iris.csv'
+    json_data = build_json_from_csv(filename, 'class')
+    dataset = Dataset(class_names=json_data['class_names'], prop_names=json_data['prop_names'])
+    for class_name, class_data in json_data['data'].items():
+        for data in class_data:
+            dataset.train(class_name, data)
+    print(dataset)
 
-        class_names = data["class_names"]
-        prop_names = data["prop_names"]
+    test_data = {"val1": 7.0, "val2": 3.2, "val3": 4.7, "val4": 1.4}
+    class_ = "Iris-setosa"
 
-        dataset = Dataset(class_names, prop_names, name="Movie")
-        for class_name, class_data in data["data"].items():
-            for d in class_data:
-                dataset.train(class_name, d)
-        for class_name, class_ in dataset.class_set.items():
-            class_.find_recursion()
-
-        print(dataset)
+    for class_name, class_ in dataset.classes.items():
+        print(class_name, class_.is_that(test_data))
