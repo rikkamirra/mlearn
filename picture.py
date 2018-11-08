@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 
 class Neuron:
-    init_value = 0
+    init_value = 0.0
 
     def __init__(self, name, x_size, y_size):
         self.name = name
@@ -17,14 +17,13 @@ class Neuron:
         x_center = int(self.x_size / 2)
         y_center = int(self.y_size / 2)
         # return (i / x_center) * (j / y_center)
-        return 1
+        return 1.0
 
     def train(self, input_matrix):
         self.validate_input(input_matrix)
-        self.train_count += 1
         for i, j in self.iterover():
-            self.matrix[i][j] += input_matrix[i][j] * self.weight_matrix[i][j]
-            self.matrix[i][j] /= self.train_count
+            self.matrix[i][j] = self._get_p(input_matrix, i, j)
+        self.train_count += 1
 
     def train_error(self, input_matrix):
         for i, j in self.iterover():
@@ -35,23 +34,13 @@ class Neuron:
         self.validate_input(input_matrix)
         for i, j in self.iterover():
             p += self._add_p(input_matrix, i, j)
-        return p
-
-    def _add_p(self, input_matrix, i, j):
-        res = []
-        res.append(self._get_p(input_matrix, i, j))
-        if i > 0:
-            res.append(self._get_p(input_matrix, i-1, j))
-        if i < self.x_size - 1:
-            res.append(self._get_p(input_matrix, i+1, j))
-        if j > 0:
-            res.append(self._get_p(input_matrix, i, j-1))
-        if j < self.y_size - 1:
-            res.append(self._get_p(input_matrix, i, j+1))
-        return max(res)
+        return p / self.size * 100
 
     def _get_p(self, input_matrix, i, j):
-        return input_matrix[i][j] * self.weight_matrix[i][j] / self.train_count
+        return (self.matrix[i][j] * self.train_count + input_matrix[i][j] * self.weight_matrix[i][j]) / (self.train_count + 1)
+
+    def _add_p(self, input_matrix, i, j):
+        return input_matrix[i][j] * self.matrix[i][j] * self.weight_matrix[i][j]
 
     def iterover(self):
         for i in range(self.y_size):
@@ -62,14 +51,18 @@ class Neuron:
         if len(input_matrix) != self.y_size or len(input_matrix[0]) != self.x_size:
             raise Exception(f'Invalid input size. Must be x = {self.x_size}, y = {self.y_size}. But have x = {len(input_matrix)} y = {len(input_matrix[0])}')
 
-    def show(self):
+    def show_matrix(self):
+        tab = '\t'
         res = ''
         for row in self.matrix:
-            res_ = ''
-            for item in row:
-                res_ += str(item)
-            res += res_ + '\n'
+            for i in row:
+                if i > 5:
+                    res += f'{int(i)}{tab}'
+                else:
+                    res += '\t'
+            res += '\n\n\n'
         return res
+
 
 
 class Brain:
@@ -80,11 +73,17 @@ class Brain:
         self.neurons.append(neuron)
 
     def recognize(self, input_string):
-        rerults = {}
+        results = {}
         input_matrix = self.build_matrix(input_string)
         for neuron in self.neurons:
-            rerults[neuron.name] = neuron.recognize(input_matrix)
-        return rerults
+            results[neuron.name] = neuron.recognize(input_matrix)
+        result = 0
+        max_p = 0
+        for k, v in results.items():
+            if v > max_p:
+                max_p = v
+                result = k
+        return result
 
     @classmethod
     def build_matrix(cls, string):
@@ -107,10 +106,6 @@ class Brain:
     def train_neuron(cls, neuron, trainfilename, train_on_error_file_names=None):
         for train_matrix in cls.get_input_from_file(trainfilename):
             neuron.train(train_matrix)
-        if train_on_error_file_names is not None:
-            for train_file_name in train_on_error_file_names:
-                for train_matrix in cls.get_input_from_file(train_file_name):
-                    neuron.train_error(train_matrix)
         return neuron
 
     @classmethod
@@ -134,29 +129,29 @@ def main():
     string = '''
 ............................
 ............................
+..............@.............
+.............@@.............
+............@@..............
+............@...............
+...........@@...............
+...........@................
+...........@................
+..........@.................
+..........@.................
+..........@........@........
+.................@@@@@......
+.........@.....@@.....@.....
+.........@....@.......@.....
+.........@...@........@.....
+.........@...@.......@......
+.........@..@.......@@......
+.........@...@.....@@.......
+..........@.......@@........
+...........@@.@@@@..........
+.............@@@............
 ............................
 ............................
 ............................
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-.............@@@............
-.............@@@............
-.............@@@............
-.............@@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@............
-..............@@@...........
-..............@@@...........
-...............@............
 ............................
 ............................
 ............................
@@ -167,6 +162,8 @@ def main():
         brain.add(v)
 
     print(brain.recognize(string))
+
+
 
 
 
